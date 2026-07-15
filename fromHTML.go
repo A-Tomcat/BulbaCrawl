@@ -10,11 +10,14 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func (cfg *Config) getNamedURLsFromHTML(htmlBody string) ([]string, error) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlBody))
+func HtmlToDoc(htmlText string) (*goquery.Document, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlText))
 	if err != nil {
 		return nil, err
 	}
+	return doc, nil
+}
+func (cfg *Config) getNamedURLsFromHTML(doc *goquery.Document) ([]string, error) {
 	var links []string
 	var crawlErr error
 	doc.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
@@ -35,15 +38,16 @@ func (cfg *Config) getNamedURLsFromHTML(htmlBody string) ([]string, error) {
 		return nil, crawlErr
 	}
 	return links, nil
-}
+} //Gets URL strings of all the TCG Cards of the Searched Pokemon
 
 func (cfg *Config) getHTML() (string, error) {
 	name_parts := strings.Split(cfg.SearchName, " ")
 	searchname_url := strings.Join(name_parts, "_")
-	SearchPath, err := url.Parse("wiki" + searchname_url + "_(" + cfg.Category + ")")
+	SearchPath, err := url.Parse("wiki/" + searchname_url + "_(" + cfg.Category + ")")
 	if err != nil {
 		return "", err
 	}
+	fmt.Println(SearchPath)
 	SearchURL := cfg.BaseURL.ResolveReference(SearchPath)
 	req, err := http.NewRequest("GET", SearchURL.String(), nil)
 	if err != nil {
@@ -77,7 +81,11 @@ func (cfg *Config) CaseTCG() error {
 	if err != nil {
 		return err
 	}
-	urls, err := cfg.getNamedURLsFromHTML(html)
+	doc, err := HtmlToDoc(html)
+	if err != nil {
+		return err
+	}
+	urls, err := cfg.getNamedURLsFromHTML(doc)
 	if err != nil {
 		return err
 	}
