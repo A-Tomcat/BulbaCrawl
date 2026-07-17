@@ -60,7 +60,9 @@ func main() {
 		mu:         &mutex,
 		wg:         &wg,
 		result:     &result,
-	}*/
+	}
+		split end
+	*/
 	args := os.Args[1:]
 	searchname := cases.Title(language.English).String(args[0])
 	cfg := Config{

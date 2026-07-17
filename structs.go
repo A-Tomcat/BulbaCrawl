@@ -8,19 +8,19 @@ type Result struct {
 
 // All the Pokemon structs
 type Pokemon_result struct {
-	Name           string    `json:"name"`
-	BaseStats      BaseStats `json:"base_stats"`
-	Prev_Evolution string    `json:"prev_evolution,omitempty"`
-	Next_Evolution []string  `json:"next_evoltion,omitempty"`
+	Name           string      `json:"name"`
+	BaseStats      []BaseStats `json:"base_stats"`
+	Prev_Evolution string      `json:"prev_evolution,omitempty"`
+	Next_Evolution []string    `json:"next_evoltion,omitempty"`
 }
 type BaseStats struct {
-	Hp     int `json:"hp"`
-	Atk    int `json:"atk"`
-	Def    int `json:"def"`
-	Sp_Att int `json:"sp_att"`
-	Sp_Def int `json:"sp_def"`
-	Speed  int `json:"spd"`
-	Total  int `json:"total"`
+	Hp     string `json:"hp"`
+	Atk    string `json:"atk"`
+	Def    string `json:"def"`
+	Sp_Att string `json:"sp_att"`
+	Sp_Def string `json:"sp_def"`
+	Speed  string `json:"spd"`
+	Total  string `json:"total"`
 }
 
 // All the TCG structs
