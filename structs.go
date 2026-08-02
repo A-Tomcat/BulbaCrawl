@@ -9,6 +9,7 @@ type Result struct {
 // All the Pokemon structs
 type Pokemon_result struct {
 	Name           string      `json:"name"`
+	PokeDex_Number int         `json:"pokedex_number"`
 	BaseStats      []BaseStats `json:"base_stats"`
 	Prev_Evolution string      `json:"prev_evolution,omitempty"`
 	Next_Evolution []string    `json:"next_evoltion,omitempty"`

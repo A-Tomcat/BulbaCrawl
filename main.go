@@ -80,7 +80,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	moveResult, err := getMoveFromHTML(doc)
+	moveResult, err := getMoveFromDoc(doc)
 	if err != nil {
 		log.Fatal(err)
 	}
