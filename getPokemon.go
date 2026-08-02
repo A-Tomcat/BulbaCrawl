@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -12,8 +12,7 @@ type Pokemon_result struct {
 	Name           string      `json:"name"`
 	PokeDex_Number int         `json:"pokedex_number"`
 	BaseStats      []BaseStats `json:"base_stats"`
-	Prev_Evolution string      `json:"prev_evolution,omitempty"`
-	Next_Evolution []string    `json:"next_evoltion,omitempty"`
+	Evolution_Line []string `json:"evolution_line"`
 }
 type BaseStats struct {
 	Hp     int `json:"hp"`
@@ -25,66 +24,69 @@ type BaseStats struct {
 	Total  int `json:"total"`
 }*/
 
-func getBaseStats(doc *goquery.Document) ([]BaseStats, error) {
+func getPokemon(doc *goquery.Document) (Pokemon_result, error) {
+	stats, err := getBaseStats(doc)
+	if err != nil {
+		return Pokemon_result{}, err
+	}
+	evos := getEvoLine(doc)
+	name := getName(doc)
+	dex := getDexNumber(doc)
+	result := Pokemon_result{
+		Name:           name,
+		BaseStats:      stats,
+		Evolution_Line: evos,
+		PokeDex_Number: dex,
+	}
+	return result, nil
+}
+func getName(doc *goquery.Document) string {
+	name := doc.Find(`h1[id*="firstHeading"]`).First().First().Text()
+	return name
+}
+
+func getDexNumber(doc *goquery.Document) string {
+	dex_string := doc.Find(`a[title*="National Pokédex"]`).Text()
+	return dex_string[8:13]
+}
+func getBaseStats(doc *goquery.Document) (BaseStats, error) {
 	docs := findStatTables(doc)
-	ReturnStats := []BaseStats{}
-	for _, doc := range docs {
-		doc.Each(func(i int, s *goquery.Selection) {
-			ReturnStats = append(ReturnStats, getBaseStat(s))
-		})
-	}
-	if ReturnStats == nil {
-		return []BaseStats{}, fmt.Errorf("No Stats found.")
-	}
-	return ReturnStats, nil
+	stats := BaseStatFinder(docs)
+	return stats, nil
 }
 
-func findStatTables(doc *goquery.Document) []*goquery.Selection {
-	tables := []*goquery.Selection{}
-	//doc_part := doc.Find(`h4[id="Base_stats"]`).NextAll()
-	doc.Find("table").Find("tbody").Each(func(i int, s *goquery.Selection) {
-		if href, _ := s.Attr("href"); href == "/wiki/Stat" {
-			tables = append(tables, s)
-		}
-	})
-	return tables
+func findStatTables(doc *goquery.Document) *goquery.Selection {
+	sel := doc.Find(`a[href="/wiki/Stat"]`).First().Parent().Parent().Parent().Parent()
+	return sel
 }
 
-func getBaseStat(s *goquery.Selection) BaseStats {
+func BaseStatFinder(sel *goquery.Selection) BaseStats {
 	stats := BaseStats{}
-	s.Each(func(i int, s *goquery.Selection) {
-		switch i {
-		case 2:
-			stats.Hp = s.First().Text()
-		case 3:
-			stats.Atk = s.First().Text()
-		case 4:
-			stats.Def = s.First().Text()
-		case 5:
-			stats.Sp_Att = s.First().Text()
-		case 6:
-			stats.Sp_Def = s.First().Text()
-		case 7:
-			stats.Speed = s.First().Text()
-		case 8:
-			stats.Total = s.First().Text()
-		default:
-			return
+	stats.Hp = sel.Find(`[href="/wiki/HP"]`).Parent().Next().Text()
+	stats.Atk = sel.Find(`[href="/wiki/Stat#Attack"]`).Parent().Next().Text()
+	stats.Def = sel.Find(`[href="/wiki/Stat#Defense"]`).Parent().Next().Text()
+	stats.Sp_Att = sel.Find(`[href="/wiki/Stat#Special_Attack"]`).Parent().Next().Text()
+	stats.Sp_Def = sel.Find(`[href="/wiki/Stat#Special_Defense"]`).Parent().Next().Text()
+	stats.Speed = sel.Find(`[href="/wiki/Stat#Speed"]`).Parent().Next().Text()
+	sel.Find("th").EachWithBreak(func(i int, s *goquery.Selection) bool {
+		if strings.Contains(s.Text(), "Total") {
+			stats.Total = s.Last().Text()[6:9]
 		}
+		return true
 	})
 	return stats
-} /*getBaseStat() returns the BaseStats struct filled with the Base Stats contained in the given Selection*/
-
+}
 func findEvo(doc *goquery.Document) *goquery.Selection {
 	doc_part := doc.Has(`h3[id="Evolution_data"]`).NextAll()
 	evo := doc_part.Find("table").First()
 	return evo
 } /*findEvo() returns the Selector containing only the Table with the Evolution Data*/
 
-func getEvoLine(doc *goquery.Selection) []string {
+func getEvoLine(doc *goquery.Document) []string {
+	sel := findEvo(doc)
 	evolutions_Line := []string{}
 	tables := []*goquery.Selection{}
-	doc.Each(func(_ int, s *goquery.Selection) {
+	sel.Find("table").Each(func(_ int, s *goquery.Selection) {
 		if s.Length() == 3 {
 			tables = append(tables, s.Eq(2))
 		}

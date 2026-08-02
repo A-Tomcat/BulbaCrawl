@@ -64,11 +64,14 @@ func main() {
 		split end
 	*/
 	args := os.Args[1:]
+	if len(args) == 0 {
+		log.Fatal("No Searchname given.\n")
+	}
 	searchname := cases.Title(language.English).String(args[0])
 	cfg := Config{
 		BaseURL:    base,
 		SearchName: searchname,
-		Category:   "move",
+		Category:   "pokemon",
 		mu:         &sync.Mutex{},
 		wg:         &sync.WaitGroup{},
 	}
@@ -80,9 +83,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	moveResult, err := getMoveFromDoc(doc)
+	pokemon, err := getPokemon(doc)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(moveResult)
+	fmt.Println(pokemon)
+	/*moveResult, err := getMoveFromDoc(doc)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(moveResult)*/
+
 }
