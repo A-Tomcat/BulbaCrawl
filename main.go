@@ -71,7 +71,7 @@ func main() {
 	cfg := Config{
 		BaseURL:    base,
 		SearchName: searchname,
-		Category:   "pokemon",
+		Category:   "Pokémon",
 		mu:         &sync.Mutex{},
 		wg:         &sync.WaitGroup{},
 	}

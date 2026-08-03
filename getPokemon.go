@@ -88,26 +88,20 @@ func BaseStatFinder(sel *goquery.Selection) BaseStats {
 	return stats
 }
 func findEvo(doc *goquery.Document) *goquery.Selection {
-	doc_part := doc.Has(`h3[id="Evolution_data"]`).NextAll()
-	evo := doc_part.Find("table").First()
-	return evo
+	doc_part := doc.Find(`[id="Evolution_data"]`)
+	nextdoc := doc_part.Parent().NextUntil(`h3`).Find("table")
+	return nextdoc
 } /*findEvo() returns the Selector containing only the Table with the Evolution Data*/
 
 func getEvoLine(doc *goquery.Document) []string {
 	sel := findEvo(doc)
 	evolutions_Line := []string{}
-	tables := []*goquery.Selection{}
-	sel.Find("table").Each(func(_ int, s *goquery.Selection) {
-		if s.Length() == 3 {
-			tables = append(tables, s.Eq(2))
+	//Need to find the Pokemon Names
+	sel.Find("tr").Each(func(i int, s *goquery.Selection) {
+		if s.Text() == "evolved" || strings.Contains(s.Text(), "Evolution") {
+			name := s.Next().First().First().Text()
+			evolutions_Line = append(evolutions_Line, name)
 		}
 	})
-	if len(tables) == 0 {
-		return evolutions_Line
-	}
-	for _, table := range tables {
-		Poke_name := table.First().Text()
-		evolutions_Line = append(evolutions_Line, Poke_name)
-	}
 	return evolutions_Line
 } /*getEvoLine() returns the Names of all Members of the Evolution line.*/
