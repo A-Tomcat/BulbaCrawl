@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -47,7 +48,17 @@ func getName(doc *goquery.Document) string {
 
 func getDexNumber(doc *goquery.Document) string {
 	dex_string := doc.Find(`a[title*="National Pokédex"]`).Text()
-	return dex_string[8:13]
+	var numbers [10]rune
+	for i := 0; i < 10; i++ {
+		numbers[i] = rune(i)
+	}
+	nums := regexp.MustCompile("[0-9]+")
+	dex := nums.FindAllString(dex_string, -1)
+	dexn := ""
+	for _, c := range dex {
+		dexn = dexn + c
+	}
+	return dexn
 }
 func getBaseStats(doc *goquery.Document) (BaseStats, error) {
 	docs := findStatTables(doc)

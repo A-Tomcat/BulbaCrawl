@@ -75,8 +75,15 @@ func main() {
 		mu:         &sync.Mutex{},
 		wg:         &sync.WaitGroup{},
 	}
-	html, err := cfg.getHTML()
+	searchlink, err := cfg.setSearchName()
 	if err != nil {
+		log.Fatal(err)
+	}
+	html, err := getHTML(searchlink)
+	if err != nil {
+		if err := cfg.returnSearchSimilar(); err != nil {
+			log.Fatal(err)
+		}
 		log.Fatal(err)
 	}
 	doc, err := HtmlToDoc(html)

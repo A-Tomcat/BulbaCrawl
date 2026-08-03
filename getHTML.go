@@ -40,7 +40,7 @@ func (cfg *Config) getNamedURLsFromHTML(doc *goquery.Document) ([]string, error)
 	return links, nil
 } //Gets URL strings of all the TCG Cards of the Searched Pokemon
 
-func (cfg *Config) getHTML() (string, error) {
+func (cfg *Config) setSearchName() (string, error) {
 	name_parts := strings.Split(cfg.SearchName, " ")
 	searchname_url := strings.Join(name_parts, "_")
 	SearchPath, err := url.Parse("wiki/" + searchname_url + "_(" + cfg.Category + ")")
@@ -49,7 +49,10 @@ func (cfg *Config) getHTML() (string, error) {
 	}
 	fmt.Println(SearchPath)
 	SearchURL := cfg.BaseURL.ResolveReference(SearchPath)
-	req, err := http.NewRequest("GET", SearchURL.String(), nil)
+	return SearchURL.String(), nil
+}
+func getHTML(link string) (string, error) {
+	req, err := http.NewRequest("GET", link, nil)
 	if err != nil {
 		return "", err
 	}
@@ -76,8 +79,24 @@ func (cfg *Config) getHTML() (string, error) {
 	return htmlString, nil
 }
 
-func (cfg *Config) CaseTCG() error {
-	html, err := cfg.getHTML()
+func (cfg *Config) setSearchLink() (string, error) {
+	link := "https://bulbapedia.bulbagarden.net/w/index.php?title=Special%3ASearch&go=Go"
+	parsed, err := url.Parse(link)
+	if err != nil {
+		return "", err
+	}
+	q := parsed.Query()
+	q.Set("search", cfg.SearchName)
+	parsed.RawQuery = q.Encode()
+	return parsed.String(), nil
+}
+
+func (cfg *Config) returnSearchSimilar() error {
+	link, err := cfg.setSearchLink()
+	if err != nil {
+		return err
+	}
+	html, err := getHTML(link)
 	if err != nil {
 		return err
 	}
@@ -85,10 +104,8 @@ func (cfg *Config) CaseTCG() error {
 	if err != nil {
 		return err
 	}
-	urls, err := cfg.getNamedURLsFromHTML(doc)
-	if err != nil {
-		return err
-	}
-	cfg.result.TCG.NumberOfCards = len(urls)
+	firstResult := doc.Find(`div[class="mw-search-results-container"]`).First()
+	title, _ := firstResult.Find("a[href]").First().Attr("title")
+	fmt.Printf("Original Searchname not conclusive.\nDid you mean: %s?\n", title)
 	return nil
 }
