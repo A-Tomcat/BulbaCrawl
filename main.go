@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -71,7 +70,7 @@ func main() {
 	cfg := Config{
 		BaseURL:    base,
 		SearchName: searchname,
-		Category:   "Pokémon",
+		Category:   "TCG",
 		mu:         &sync.Mutex{},
 		wg:         &sync.WaitGroup{},
 	}
@@ -90,11 +89,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	pokemon, err := getPokemon(doc)
+	cfg.getCards(doc)
+	/*pokemon, err := getPokemon(doc)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(pokemon)
+	*/
 	/*moveResult, err := getMoveFromDoc(doc)
 	if err != nil {
 		log.Fatal(err)
