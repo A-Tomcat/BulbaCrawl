@@ -47,7 +47,6 @@ func (cfg *Config) setSearchName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(SearchPath)
 	SearchURL := cfg.BaseURL.ResolveReference(SearchPath)
 	return SearchURL.String(), nil
 }

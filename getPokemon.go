@@ -96,12 +96,17 @@ func findEvo(doc *goquery.Document) *goquery.Selection {
 func getEvoLine(doc *goquery.Document) []string {
 	sel := findEvo(doc)
 	evolutions_Line := []string{}
-	//Need to find the Pokemon Names
 	sel.Find("tr").Each(func(i int, s *goquery.Selection) {
-		if s.Text() == "evolved" || strings.Contains(s.Text(), "Evolution") {
-			name := s.Next().First().First().Text()
+		if strings.Contains(s.Text(), "evolved") || strings.Contains(s.Text(), "Evolution") {
+			name_sel := s.Next().Find("a").First()
+			name := strings.TrimSpace(name_sel.Text())
 			evolutions_Line = append(evolutions_Line, name)
 		}
 	})
+	if len(evolutions_Line[0]) == 0 {
+		evolutions := []string{}
+		evolutions = append(evolutions, evolutions_Line[1:]...)
+		return evolutions
+	}
 	return evolutions_Line
 } /*getEvoLine() returns the Names of all Members of the Evolution line.*/
