@@ -35,21 +35,33 @@ import (
 */
 func (cfg *Config) getCards(doc *goquery.Document) {
 	//name := getTCGName(doc)
-	links := getCardLinks(doc)
-	fmt.Println(links)
+	names, links := cfg.getCardLinks(doc)
+	cfg.formatAllCards(names, links)
 
 }
 func getTCGName(doc *goquery.Document) string {
 	name := doc.Find(`h1[id*="firstHeading"]`).First().First().Text()
 	return name
 }
+func (cfg *Config) formatAllCards(names, links []string) {
+	fmt.Printf("%s has %d different Cards in the Pokémon TCG:\n", cfg.SearchName, len(names))
+	baseLink := "https://bulbapedia.bulbagarden.net"
+	for i, name := range names {
+		link := baseLink + links[i]
+		fmt.Printf(" -%s, %s \n", name, link)
+	}
+}
 
-func getCardLinks(doc *goquery.Document) []string {
-	links := []string{}
+func (cfg *Config) getCardLinks(doc *goquery.Document) (names, links []string) {
 	selector := `tbody tr[style^="background"]`
 	doc.Find(selector).Each(func(i int, s *goquery.Selection) {
-		text := s.Find(`a[href]`).Text()
-		links = append(links, text)
+		sel := s.Find(`a[href]`)
+		name, _ := sel.Attr("title")
+		link, _ := sel.Attr("href")
+		if name != "" {
+			links = append(links, link)
+			names = append(names, name)
+		}
 	})
-	return links
+	return names, links
 }
