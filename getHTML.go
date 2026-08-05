@@ -41,6 +41,11 @@ func (cfg *Config) getNamedURLsFromHTML(doc *goquery.Document) ([]string, error)
 } //Gets URL strings of all the TCG Cards of the Searched Pokemon
 
 func (cfg *Config) setSearchName() (string, error) {
+	/*
+		if strings.HasSuffix(searchname, ")") && cfg.Category == "TCG" {
+			//need different link finder for specific tcg cards instead of a general pokemons cards
+		}
+	*/
 	name_parts := strings.Split(cfg.SearchName, " ")
 	searchname_url := strings.Join(name_parts, "_")
 	SearchPath, err := url.Parse("wiki/" + searchname_url + "_(" + cfg.Category + ")")

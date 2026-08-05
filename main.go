@@ -74,6 +74,9 @@ func main() {
 		mu:         &sync.Mutex{},
 		wg:         &sync.WaitGroup{},
 	}
+	/*if strings.HasSuffix(searchname, ")") && cfg.Category == "TCG" {
+		//need different link finder for specific tcg cards instead of a general pokemons cards
+	}*/
 	searchlink, err := cfg.setSearchName()
 	if err != nil {
 		log.Fatal(err)

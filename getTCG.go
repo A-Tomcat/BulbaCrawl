@@ -33,12 +33,15 @@ import (
 		Damage int    `json:"damage"`
 		Eff
 */
+
+// Here starts the functions needed to recieve all TCG Cards of the specified Pokemon
 func (cfg *Config) getCards(doc *goquery.Document) {
 	//name := getTCGName(doc)
-	names, links := cfg.getCardLinks(doc)
+	names, links := getCardLinks(doc)
 	cfg.formatAllCards(names, links)
 
 }
+
 func getTCGName(doc *goquery.Document) string {
 	name := doc.Find(`h1[id*="firstHeading"]`).First().First().Text()
 	return name
@@ -50,9 +53,9 @@ func (cfg *Config) formatAllCards(names, links []string) {
 		link := baseLink + links[i]
 		fmt.Printf(" -%s, %s \n", name, link)
 	}
-}
+} //This Prints a formatted version of -<name> <link> for of the Pokémons cards.
 
-func (cfg *Config) getCardLinks(doc *goquery.Document) (names, links []string) {
+func getCardLinks(doc *goquery.Document) (names, links []string) {
 	selector := `tbody tr[style^="background"]`
 	doc.Find(selector).Each(func(i int, s *goquery.Selection) {
 		sel := s.Find(`a[href]`)
@@ -64,4 +67,12 @@ func (cfg *Config) getCardLinks(doc *goquery.Document) (names, links []string) {
 		}
 	})
 	return names, links
+}
+
+// Here ends the functions needed to recieve all TCG Cards of the specified Pokemon
+
+func getCardText(doc *goquery.Document) {
+	sel := doc.Find(`[id="Card_text"]`).Parent().Next().Children()
+	fmt.Println(sel.Text())
+
 }
