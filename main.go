@@ -13,6 +13,7 @@ import (
 type Config struct {
 	BaseURL    *url.URL
 	SearchName string
+	Args       []string
 	Category   string
 	mu         *sync.Mutex
 	wg         *sync.WaitGroup
@@ -70,13 +71,11 @@ func main() {
 	cfg := Config{
 		BaseURL:    base,
 		SearchName: searchname,
+		Args:       args,
 		Category:   "TCG",
 		mu:         &sync.Mutex{},
 		wg:         &sync.WaitGroup{},
 	}
-	/*if strings.HasSuffix(searchname, ")") && cfg.Category == "TCG" {
-		//need different link finder for specific tcg cards instead of a general pokemons cards
-	}*/
 	searchlink, err := cfg.setSearchName()
 	if err != nil {
 		log.Fatal(err)
