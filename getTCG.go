@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -19,8 +20,8 @@ import (
 		Name         string        `json:"name"`
 		Type         string        `json:"type"`
 		Stage        string        `json:"stage"`
-		EvolvesFrom  string        `json:"evolves_from,omitempty"`
-		Ability      string        `json:"ability,omitempty"`
+		HP           string        `json:"hp"`
+		Ability      []CardAbility `json:"ability,omitempty"`
 		Attacks      []CardAttacks `json:"attacks"`
 		Resistance   string        `json:"resistance"`
 		Weakness     string        `json:"weakness"`
@@ -31,7 +32,14 @@ import (
 	type CardAttacks struct {
 		Name   string `json:"name"`
 		Damage int    `json:"damage"`
-		Eff
+		Effect string `json:"effect,omitempty"`
+		Cost   string `json:"cost"`
+	}
+
+	type CardAbility struct {
+		Name   string `json:"name"`
+		Effect string `json:"effect"`
+	}
 */
 
 // Here starts the functions needed to recieve all TCG Cards of the specified Pokemon
@@ -70,9 +78,134 @@ func getCardLinks(doc *goquery.Document) (names, links []string) {
 }
 
 // Here ends the functions needed to recieve all TCG Cards of the specified Pokemon
+func formatSpecificCard(card Card) {
+	fmt.Printf("%s - %s - %s HP\n", card.Name, card.Type, card.HP)
+	fmt.Printf("Is weak to: %s, resistant to: %s, and has a Retreat Cost of: %d\n", card.Weakness, card.Resistance, card.RetreatCost)
+}
+func (cfg *Config) getSpecificCardContent(doc *goquery.Document) (card Card) {
+	card.Name = doc.Find("h1").Text()
+	card.Stage = doc.Find(`[href="/wiki/Type_(TCG)"]`).Parent().Text()
+	stats_sel := getStatsTable(doc)
+	card.Type = getType(stats_sel)
+	card.Weakness, card.Resistance, card.RetreatCost = getWRR(stats_sel)
+	card.Stage = getEvoStage(stats_sel)
+	card.HP = getHP(stats_sel)
+	card.PokedexEntry = getTCGDexData(doc)
+	card.Attacks, card.Ability = getCardAbilityAttacks(doc)
+	return card
+}
 
-func getCardText(doc *goquery.Document) {
-	sel := doc.Find(`[id="Card_text"]`).Parent().Next().Children()
-	fmt.Println(sel.Text())
+func getCardAbilityAttacks(doc *goquery.Document) (attacks []CardAttacks, abilities []CardAbility) {
+	sel := doc.Find(`[id="Card_text"]`).Parent().NextUntil(`h2`).Not("h3").First()
+	sel.Each(func(i int, s *goquery.Selection) {
+		attr, ok := s.Attr("title")
+		if ok == true {
+			if attr == "Ability" || attr == "Poké-BODY" || attr == "Poké-POWER" {
+			}
+			if s.Text() == "Pokémon Power" {
+				new_sel := s.Parent().Parent().Parent().Parent()
+				abilities = append(abilities, getAbility(new_sel))
+			}
+			getAttack(sel, attr, attacks)
+		}
+	})
+	return
+}
 
+func getAttack(sel *goquery.Selection, attr string, attacks []CardAttacks) {
+	attack := CardAttacks{}
+	if checkElement(attr) {
+		sel = sel.Parent().Parent().Parent()
+		cost := make(map[string]int)
+		sel.First().Find("[title]").Each(func(i int, s *goquery.Selection) {
+			name, _ := s.Attr("title")
+			if !checkElement(name) {
+				return
+			}
+			if _, ok := cost[name]; !ok {
+				cost[name] = 1
+			} else {
+				cost[name]++
+			}
+		})
+		attack.Cost = cost
+		attack.Damage = sel.Eq(2).Text()
+		attack.Name = sel.Eq(1).Text()
+		attack.Effect = sel.Siblings().Text()
+		ok := false
+		for _, at := range attacks {
+			if attack.Name == at.Name {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			attacks = append(attacks, attack)
+		}
+	}
+}
+
+func checkElement(attr string) bool {
+	if attr == " " || attr == "Grass" || attr == "Fire" || attr == "Water" || attr == "Lightning" || attr == "Fighting" || attr == "Psychic" || attr == "Colorless" || attr == "Darkness" || attr == "Metal" || attr == "Dragon" || attr == "Fairy" {
+		return true
+	}
+	return false
+}
+
+func getAbility(sel *goquery.Selection) CardAbility {
+	ability := CardAbility{}
+	ability.Name = sel.First().Eq(0).Eq(1).Text()
+	ability.Effect = sel.First().Eq(1).Text()
+	return ability
+}
+
+func getTCGDexData(doc *goquery.Document) string {
+	sel := doc.Find(`[id="Pokédex_data"]`).Parent().Next()
+	if sel == nil {
+		return ""
+	}
+	return sel.Text()
+}
+
+// Function works and returns the correct Selection. Functions working off this need adjustment.
+func getStatsTable(doc *goquery.Document) (sel *goquery.Selection) {
+	sel = doc.Find(`[title="Type (TCG)"]`).Parent().Parent().Parent()
+	return
+}
+
+func getType(sel *goquery.Selection) (element string) {
+	s := sel.Find(`[title="Type (TCG)"]`).Parent().Siblings().Find("[title]")
+	element, _ = s.Attr("title")
+	return
+}
+
+func getWRR(sel *goquery.Selection) (weakness string, resistance string, retreat_cost int) {
+	sel.Find(`small`).Each(func(i int, s *goquery.Selection) {
+		if s.Text() == "retreat cost" {
+			retreat_cost = s.Parent().Find("span[typeof]").Length()
+		}
+		if s.Text() == "weakness" {
+			wk, _ := s.Siblings().Find(`[title]`).Attr("title")
+			temp := strings.ReplaceAll(s.Parent().Text(), "weakness", "")
+			temp = strings.ReplaceAll(temp, "\n", "")
+			weakness = fmt.Sprintf("%s %s", wk, temp)
+		}
+		if s.Text() == "resistance" {
+			rs, _ := s.Siblings().Find(`[title]`).Attr("title")
+			temp := strings.ReplaceAll(s.Parent().Text(), "resistance", "")
+			temp = strings.ReplaceAll(temp, "\n", "")
+			resistance = fmt.Sprintf("%s %s", rs, temp)
+		}
+	})
+	return
+}
+
+func getEvoStage(sel *goquery.Selection) string {
+	return sel.Eq(0).Text()
+}
+
+func getHP(sel *goquery.Selection) (hp string) {
+	hp = sel.Find(`[title="HP (TCG)"]`).Parent().Siblings().Text()
+	hp = strings.ReplaceAll(hp, "\n", "")
+	return hp
 }

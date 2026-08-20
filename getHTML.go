@@ -41,13 +41,12 @@ func (cfg *Config) getNamedURLsFromHTML(doc *goquery.Document) ([]string, error)
 } //Gets URL strings of all the TCG Cards of the Searched Pokemon
 
 func (cfg *Config) setSearchName() (string, error) {
-	var SearchPath *url.URL
 	if strings.Contains(cfg.Args[0], "/wiki/") {
 		path, err := url.Parse(cfg.Args[0])
 		if err != nil {
 			return "", err
 		}
-		SearchPath = cfg.BaseURL.ResolveReference(path)
+		SearchPath := cfg.BaseURL.ResolveReference(path)
 		return SearchPath.String(), nil
 	}
 	name_parts := strings.Split(cfg.SearchName, " ")

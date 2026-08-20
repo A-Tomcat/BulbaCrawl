@@ -91,7 +91,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg.getCards(doc)
+	card := cfg.getSpecificCardContent(doc)
+	formatSpecificCard(card)
 	/*pokemon, err := getPokemon(doc)
 	if err != nil {
 		log.Fatal(err)

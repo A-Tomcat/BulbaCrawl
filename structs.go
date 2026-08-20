@@ -33,8 +33,8 @@ type Card struct {
 	Name         string        `json:"name"`
 	Type         string        `json:"type"`
 	Stage        string        `json:"stage"`
-	EvolvesFrom  string        `json:"evolves_from,omitempty"`
-	Ability      string        `json:"ability,omitempty"`
+	HP           string        `json:"hp"`
+	Ability      []CardAbility `json:"ability,omitempty"`
 	Attacks      []CardAttacks `json:"attacks"`
 	Resistance   string        `json:"resistance"`
 	Weakness     string        `json:"weakness"`
@@ -42,10 +42,16 @@ type Card struct {
 	PokedexEntry string        `json:"pokedex_entry"`
 }
 
-type CardAttacks struct {
+type CardAbility struct {
 	Name   string `json:"name"`
-	Damage int    `json:"damage"`
-	Effect string `json:"effect,omitempty"`
+	Effect string `json:"effect"`
+}
+
+type CardAttacks struct {
+	Name   string         `json:"name"`
+	Damage string         `json:"damage"`
+	Effect string         `json:"effect,omitempty"`
+	Cost   map[string]int `json:"cost"`
 }
 
 // All the Move structs
