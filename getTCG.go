@@ -80,7 +80,9 @@ func getCardLinks(doc *goquery.Document) (names, links []string) {
 // Here ends the functions needed to recieve all TCG Cards of the specified Pokemon
 func formatSpecificCard(card Card) {
 	fmt.Printf("%s - %s - %s HP\n", card.Name, card.Type, card.HP)
+	fmt.Println(card.Stage)
 	fmt.Printf("Is weak to: %s, resistant to: %s, and has a Retreat Cost of: %d\n", card.Weakness, card.Resistance, card.RetreatCost)
+	fmt.Println(card.PokedexEntry)
 }
 func (cfg *Config) getSpecificCardContent(doc *goquery.Document) (card Card) {
 	card.Name = doc.Find("h1").Text()
@@ -145,13 +147,6 @@ func getAttack(sel *goquery.Selection, attr string, attacks []CardAttacks) {
 	}
 }
 
-func checkElement(attr string) bool {
-	if attr == " " || attr == "Grass" || attr == "Fire" || attr == "Water" || attr == "Lightning" || attr == "Fighting" || attr == "Psychic" || attr == "Colorless" || attr == "Darkness" || attr == "Metal" || attr == "Dragon" || attr == "Fairy" {
-		return true
-	}
-	return false
-}
-
 func getAbility(sel *goquery.Selection) CardAbility {
 	ability := CardAbility{}
 	ability.Name = sel.First().Eq(0).Eq(1).Text()
@@ -159,15 +154,27 @@ func getAbility(sel *goquery.Selection) CardAbility {
 	return ability
 }
 
+// Below Works as Intended!
+
 func getTCGDexData(doc *goquery.Document) string {
 	sel := doc.Find(`[id="Pokédex_data"]`).Parent().Next()
-	if sel == nil {
-		return ""
+	if sel.Text() == "" {
+		return "No PokéDex Entry on this Pokémon Card."
 	}
-	return sel.Text()
+	raw := sel.Text()
+	de_spaced := strings.TrimSpace(raw)
+	de_ln := strings.ReplaceAll(de_spaced, "\n\n", "\n")
+	de_ln = strings.Replace(de_ln, "\n", "", 1)
+	clean := strings.Replace(de_ln, "Pokédex entry", "Pokédex entry:\n", 1)
+	return clean
 }
 
-// Function works and returns the correct Selection. Functions working off this need adjustment.
+func checkElement(attr string) bool {
+	if attr == " " || attr == "Grass" || attr == "Fire" || attr == "Water" || attr == "Lightning" || attr == "Fighting" || attr == "Psychic" || attr == "Colorless" || attr == "Darkness" || attr == "Metal" || attr == "Dragon" || attr == "Fairy" {
+		return true
+	}
+	return false
+}
 func getStatsTable(doc *goquery.Document) (sel *goquery.Selection) {
 	sel = doc.Find(`[title="Type (TCG)"]`).Parent().Parent().Parent()
 	return
@@ -201,7 +208,11 @@ func getWRR(sel *goquery.Selection) (weakness string, resistance string, retreat
 }
 
 func getEvoStage(sel *goquery.Selection) string {
-	return sel.Eq(0).Text()
+	raw := sel.Children().First().Children().Eq(1).Text()
+	text := strings.ReplaceAll(raw, "\n\n", "")
+	text = strings.ReplaceAll(text, "PokémonEvolves", "Pokémon, Evolves")
+	text = strings.TrimLeft(text, "\n")
+	return text
 }
 
 func getHP(sel *goquery.Selection) (hp string) {
