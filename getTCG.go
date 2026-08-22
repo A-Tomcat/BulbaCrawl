@@ -82,6 +82,8 @@ func formatSpecificCard(card Card) {
 	fmt.Printf("%s - %s - %s HP\n", card.Name, card.Type, card.HP)
 	fmt.Println(card.Stage)
 	fmt.Printf("Is weak to: %s, resistant to: %s, and has a Retreat Cost of: %d\n", card.Weakness, card.Resistance, card.RetreatCost)
+	fmt.Println(card.Attacks)
+	fmt.Println(card.Ability)
 	fmt.Println(card.PokedexEntry)
 }
 func (cfg *Config) getSpecificCardContent(doc *goquery.Document) (card Card) {
@@ -93,68 +95,85 @@ func (cfg *Config) getSpecificCardContent(doc *goquery.Document) (card Card) {
 	card.Stage = getEvoStage(stats_sel)
 	card.HP = getHP(stats_sel)
 	card.PokedexEntry = getTCGDexData(doc)
-	card.Attacks, card.Ability = getCardAbilityAttacks(doc)
+	card.getCardAbilityAttacks(doc)
 	return card
 }
 
-func getCardAbilityAttacks(doc *goquery.Document) (attacks []CardAttacks, abilities []CardAbility) {
-	sel := doc.Find(`[id="Card_text"]`).Parent().NextUntil(`h2`).Not("h3").First()
-	sel.Each(func(i int, s *goquery.Selection) {
-		attr, ok := s.Attr("title")
-		if ok == true {
-			if attr == "Ability" || attr == "Poké-BODY" || attr == "Poké-POWER" {
-			}
-			if s.Text() == "Pokémon Power" {
-				new_sel := s.Parent().Parent().Parent().Parent()
-				abilities = append(abilities, getAbility(new_sel))
-			}
-			getAttack(sel, attr, attacks)
-		}
+func (card *Card) getCardAbilityAttacks(doc *goquery.Document) {
+	sel := doc.Find(`[id="Card_text"]`).Parent().NextUntil(`h2`).Not("h3").First().Children()
+	sel.Find("[title]").Each(func(i int, s *goquery.Selection) {
+		attr, _ := s.Attr("title")
+		card.swapAbilityAttack(sel, attr)
 	})
-	return
 }
 
-func getAttack(sel *goquery.Selection, attr string, attacks []CardAttacks) {
+func (card *Card) getAttack(sel *goquery.Selection, attr string) {
 	attack := CardAttacks{}
-	if checkElement(attr) {
-		sel = sel.Parent().Parent().Parent()
-		cost := make(map[string]int)
-		sel.First().Find("[title]").Each(func(i int, s *goquery.Selection) {
-			name, _ := s.Attr("title")
-			if !checkElement(name) {
-				return
-			}
-			if _, ok := cost[name]; !ok {
-				cost[name] = 1
-			} else {
-				cost[name]++
-			}
-		})
-		attack.Cost = cost
-		attack.Damage = sel.Eq(2).Text()
-		attack.Name = sel.Eq(1).Text()
-		attack.Effect = sel.Siblings().Text()
-		ok := false
-		for _, at := range attacks {
-			if attack.Name == at.Name {
-				ok = true
-				break
-			}
+	//Get Cost:
+	cost := make(map[string]int)
+	cost[attr] = 1
+	sel = sel.Parent().Siblings()
+	sel.Each(func(i int, s *goquery.Selection) {
+		name, _ := s.Attr("title")
+		if !checkElement(name) {
+			return
 		}
-		if !ok {
-			attacks = append(attacks, attack)
+		if name == " " {
+			name = "Free"
 		}
+		if _, ok := cost[name]; !ok {
+			cost[name] = 1
+		} else {
+			cost[name]++
+		}
+	})
+	attack.Cost = cost
+	attack.Damage = "sel.Eq(2).Text()"
+	attack.Name = "sel.Eq(1).Text()"
+	attack.Effect = "sel.Siblings().Text()"
+	ok := false
+	for _, at := range card.Attacks {
+		if attack.Name == at.Name {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		card.Attacks = append(card.Attacks, attack)
 	}
 }
 
-func getAbility(sel *goquery.Selection) CardAbility {
-	ability := CardAbility{}
-	ability.Name = sel.First().Eq(0).Eq(1).Text()
-	ability.Effect = sel.First().Eq(1).Text()
-	return ability
+// Below Works as Intended!
+
+func (card *Card) swapAbilityAttack(sel *goquery.Selection, attr string) {
+	if attr == "Ability" || attr == "Poké-BODY" || attr == "Poké-POWER" || strings.Contains(sel.Text(), "Pokémon Power") {
+		card.getAbility(sel)
+	}
+	if checkElement(attr) {
+		card.getAttack(sel, attr)
+	}
 }
 
-// Below Works as Intended!
+func (card *Card) getAbility(sel *goquery.Selection) {
+	ability := CardAbility{}
+	//fmt.Println(sel.Text())
+	s := sel.Parent().Parent().Parent().Parent().Children()
+	name, _ := s.Find(`span[class="explain"]`).Attr("title")
+	notnew := true
+	for _, x := range card.Ability {
+		if name == x.Name {
+			notnew = false
+			break
+		}
+	}
+	if !notnew {
+		return
+	}
+	ability.Name = name
+	e := s.Find(`span[class="explain"]`).Parent().Parent().Parent().Next().First()
+	ability.Effect = e.Text()
+	card.Ability = append(card.Ability, ability)
+}
 
 func getTCGDexData(doc *goquery.Document) string {
 	sel := doc.Find(`[id="Pokédex_data"]`).Parent().Next()
@@ -201,6 +220,7 @@ func getWRR(sel *goquery.Selection) (weakness string, resistance string, retreat
 			rs, _ := s.Siblings().Find(`[title]`).Attr("title")
 			temp := strings.ReplaceAll(s.Parent().Text(), "resistance", "")
 			temp = strings.ReplaceAll(temp, "\n", "")
+			temp = strings.TrimSpace(temp)
 			resistance = fmt.Sprintf("%s %s", rs, temp)
 		}
 	})
@@ -211,7 +231,7 @@ func getEvoStage(sel *goquery.Selection) string {
 	raw := sel.Children().First().Children().Eq(1).Text()
 	text := strings.ReplaceAll(raw, "\n\n", "")
 	text = strings.ReplaceAll(text, "PokémonEvolves", "Pokémon, Evolves")
-	text = strings.TrimLeft(text, "\n")
+	text = strings.Trim(text, "\n")
 	return text
 }
 
