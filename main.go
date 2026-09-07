@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -14,7 +15,6 @@ type Config struct {
 	BaseURL    *url.URL
 	SearchName string
 	Args       []string
-	Category   string
 	mu         *sync.Mutex
 	wg         *sync.WaitGroup
 	result     *Result
@@ -25,44 +25,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//split
-	/*
-		fmt.Println("Hello Moron.")
-		args := os.Args[1:]
-		if len(args) < 1 {
-			log.Fatal(`Usage: ./pokecrawl <tcg/pokemon/move> "<name>"`)
-		}
-		baseURL := os.Getenv("BASEURL")
-		base_url, err := url.Parse(baseURL)
-		if err != nil {
-			log.Fatal(err)
-		}
-		category := strings.ToLower(args[0])
-		switch category {
-		case "tcg":
-			category = "TCG"
-		case "move":
-			category = "move"
-		case "pokemon":
-			category = "pokémon"
-		default:
-			log.Fatal("Category not unique, Options: <move>, <tcg>, <pokemon>")
-		}
-		searchname := cases.Title(language.English).String(args[1])
-		var wg sync.WaitGroup
-		var mutex sync.Mutex
-		result := Result{}
-	*/
-	/*cfg := Config{
-		BaseURL:    base_url,
-		SearchName: searchname,
-		Category:   category,
-		mu:         &mutex,
-		wg:         &wg,
-		result:     &result,
-	}
-		split end
-	*/
 	args := os.Args[1:]
 	if len(args) == 0 {
 		log.Fatal("No Searchname given.\n")
@@ -72,37 +34,24 @@ func main() {
 		BaseURL:    base,
 		SearchName: searchname,
 		Args:       args,
-		Category:   "TCG",
 		mu:         &sync.Mutex{},
 		wg:         &sync.WaitGroup{},
 	}
-	searchlink, err := cfg.setSearchName()
+	poke_Link, err := cfg.setSearchName("Pokémon")
 	if err != nil {
+		fmt.Println("Searchname not found.")
 		log.Fatal(err)
 	}
-	html, err := getHTML(searchlink)
-	if err != nil {
-		if err := cfg.returnSearchSimilar(); err != nil {
-			log.Fatal(err)
+	if poke_Link == "Direct_Link" {
+		if er := cfg.SpecificCard(); er != nil {
+			log.Fatal(er)
 		}
+	}
+	if err := cfg.Pokemon(poke_Link); err != nil {
 		log.Fatal(err)
 	}
-	doc, err := HtmlToDoc(html)
-	if err != nil {
+	if err := cfg.Cards(); err != nil {
 		log.Fatal(err)
 	}
-	card := cfg.getSpecificCardContent(doc)
-	formatSpecificCard(card)
-	/*pokemon, err := getPokemon(doc)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(pokemon)
-	*/
-	/*moveResult, err := getMoveFromDoc(doc)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(moveResult)*/
 
 }

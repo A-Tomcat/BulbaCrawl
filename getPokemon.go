@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -31,8 +32,10 @@ func getPokemon(doc *goquery.Document) (Pokemon_result, error) {
 		return Pokemon_result{}, err
 	}
 	evos := getEvoLine(doc)
-	name := getName(doc)
+	raw_name := getName(doc)
 	dex := getDexNumber(doc)
+	name := strings.Replace(raw_name, "(Pokémon)", "", 1)
+	name = strings.TrimSpace(name)
 	result := Pokemon_result{
 		Name:           name,
 		BaseStats:      stats,
@@ -41,6 +44,30 @@ func getPokemon(doc *goquery.Document) (Pokemon_result, error) {
 	}
 	return result, nil
 }
+func (cfg Config) Pokemon(link string) error {
+	Poke_html, err := getHTML(link)
+	if err != nil {
+		return err
+	}
+	Poke_doc, err := HtmlToDoc(Poke_html)
+	if err != nil {
+		return err
+	}
+	pokemon, err := getPokemon(Poke_doc)
+	formatPokemon(pokemon)
+	return nil
+}
+
+func formatPokemon(p Pokemon_result) {
+	fmt.Printf("%s %s \n", p.PokeDex_Number, p.Name)
+	if len(p.Evolution_Line) > 1 {
+		fmt.Printf("Evolution Line: %s\n", p.Evolution_Line)
+	} else {
+		fmt.Println("Single Stage Pokémon")
+	}
+	fmt.Printf("Base Stats:\n -HP: %s\n -Attack: %s\n -Defense: %s\n -Special Attack: %s\n -Special Defense: %s\n -Speed: %s\n  -Total: %s\n\n", p.BaseStats.Hp, p.BaseStats.Atk, p.BaseStats.Def, p.BaseStats.Sp_Att, p.BaseStats.Sp_Def, p.BaseStats.Speed, p.BaseStats.Total)
+}
+
 func getName(doc *goquery.Document) string {
 	name := doc.Find(`h1[id*="firstHeading"]`).First().First().Text()
 	return name

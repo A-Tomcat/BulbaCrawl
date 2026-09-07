@@ -47,7 +47,23 @@ func (cfg *Config) getCards(doc *goquery.Document) {
 	//name := getTCGName(doc)
 	names, links := getCardLinks(doc)
 	cfg.formatAllCards(names, links)
+}
 
+func (cfg Config) Cards() error {
+	link, err := cfg.setSearchName("TCG")
+	if err != nil {
+		return err
+	}
+	tcg_html, err := getHTML(link)
+	if err != nil {
+		return err
+	}
+	TCG_doc, err := HtmlToDoc(tcg_html)
+	if err != nil {
+		return err
+	}
+	cfg.getCards(TCG_doc)
+	return nil
 }
 
 func getTCGName(doc *goquery.Document) string {
@@ -82,8 +98,11 @@ func formatSpecificCard(card Card) {
 	fmt.Printf("%s - %s - %s HP\n", card.Name, card.Type, card.HP)
 	fmt.Println(card.Stage)
 	fmt.Printf("Is weak to: %s, resistant to: %s, and has a Retreat Cost of: %d\n", card.Weakness, card.Resistance, card.RetreatCost)
+	for _, a := range card.Ability {
+		fmt.Printf("-%s:\n", a.Name)
+		fmt.Printf("  %s\n", a.Effect)
+	}
 	fmt.Println(card.Attacks)
-	fmt.Println(card.Ability)
 	fmt.Println(card.PokedexEntry)
 }
 func (cfg *Config) getSpecificCardContent(doc *goquery.Document) (card Card) {
@@ -99,6 +118,24 @@ func (cfg *Config) getSpecificCardContent(doc *goquery.Document) (card Card) {
 	return card
 }
 
+func (cfg Config) SpecificCard() error {
+	link, err := cfg.LinkGiven()
+	if err != nil {
+		return err
+	}
+	TCG_html, err := getHTML(link)
+	if err != nil {
+		return err
+	}
+	TCG_doc, err := HtmlToDoc(TCG_html)
+	if err != nil {
+		return err
+	}
+	card := cfg.getSpecificCardContent(TCG_doc)
+	formatSpecificCard(card)
+	return nil
+}
+
 func (card *Card) getCardAbilityAttacks(doc *goquery.Document) {
 	sel := doc.Find(`[id="Card_text"]`).Parent().NextUntil(`h2`).Not("h3").First().Children()
 	sel.Find("[title]").Each(func(i int, s *goquery.Selection) {
@@ -107,12 +144,38 @@ func (card *Card) getCardAbilityAttacks(doc *goquery.Document) {
 	})
 }
 
+/*
 func (card *Card) getAttack(sel *goquery.Selection, attr string) {
-	attack := CardAttacks{}
+	attacks := card.Attacks
+	attack := CardAttacks{
+		Cost: make(map[string]int),
+	}
+
+	attack.Name = "sel.Eq(1).Text()"
+
+	attack.Damage = "sel.Eq(2).Text()"
+	attack.Effect = "sel.Siblings().Text()"
+	println(sel.Length())
+	println(sel.Eq(1).Text())
+
 	//Get Cost:
 	cost := make(map[string]int)
-	cost[attr] = 1
-	sel = sel.Parent().Siblings()
+	id := -1
+	for i, at := range attacks {
+		if attack.Name == at.Name {
+			id = i
+			break
+		}
+	}
+	if id < 0 {
+		attack.Cost[attr] = 1
+	} else if _, ok := attacks[attack.Name]; !ok {
+
+	}
+
+	if _, ok := attack.Cost[attr]; !ok {
+		attack.Cost[attr] = 1
+	}
 	sel.Each(func(i int, s *goquery.Selection) {
 		name, _ := s.Attr("title")
 		if !checkElement(name) {
@@ -128,9 +191,6 @@ func (card *Card) getAttack(sel *goquery.Selection, attr string) {
 		}
 	})
 	attack.Cost = cost
-	attack.Damage = "sel.Eq(2).Text()"
-	attack.Name = "sel.Eq(1).Text()"
-	attack.Effect = "sel.Siblings().Text()"
 	ok := false
 	for _, at := range card.Attacks {
 		if attack.Name == at.Name {
@@ -141,16 +201,16 @@ func (card *Card) getAttack(sel *goquery.Selection, attr string) {
 	if !ok {
 		card.Attacks = append(card.Attacks, attack)
 	}
-}
+}*/
 
 // Below Works as Intended!
 
 func (card *Card) swapAbilityAttack(sel *goquery.Selection, attr string) {
 	if attr == "Ability" || attr == "Poké-BODY" || attr == "Poké-POWER" || strings.Contains(sel.Text(), "Pokémon Power") {
 		card.getAbility(sel)
-	}
-	if checkElement(attr) {
-		card.getAttack(sel, attr)
+	} else if checkElement(attr) {
+		return
+		//card.getAttack(sel, attr)
 	}
 }
 
