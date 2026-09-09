@@ -53,6 +53,7 @@ func (cfg *Config) setSearchName(cat string) (string, error) {
 	SearchURL := cfg.BaseURL.ResolveReference(SearchPath)
 	return SearchURL.String(), nil
 }
+
 func (cfg Config) LinkGiven() (string, error) {
 	path, err := url.Parse(cfg.Args[0])
 	if err != nil {
@@ -61,6 +62,7 @@ func (cfg Config) LinkGiven() (string, error) {
 	SearchPath := cfg.BaseURL.ResolveReference(path)
 	return SearchPath.String(), nil
 }
+
 func getHTML(link string) (string, error) {
 	req, err := http.NewRequest("GET", link, nil)
 	if err != nil {
@@ -89,6 +91,7 @@ func getHTML(link string) (string, error) {
 	return htmlString, nil
 }
 
+/*
 func (cfg *Config) setSearchLink() (string, error) {
 	link := "https://bulbapedia.bulbagarden.net/w/index.php?title=Special%3ASearch&go=Go"
 	parsed, err := url.Parse(link)
@@ -119,3 +122,4 @@ func (cfg *Config) returnSearchSimilar() error {
 	fmt.Printf("Original Searchname not conclusive.\nDid you mean: %s?\n", title)
 	return nil
 }
+*/
