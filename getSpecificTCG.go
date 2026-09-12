@@ -83,102 +83,83 @@ func (cfg Config) SpecificCard() error {
 	return nil
 }
 
-func (card *Card) getCardAbilityAttacks(doc *goquery.Document) {
-	sel := doc.Find(`[id="Card_text"]`).Parent().NextUntil(`h2`).Not("h3").First().Children()
-	sel.Find("[title]").Each(func(i int, s *goquery.Selection) {
-		attr, _ := s.Attr("title")
-		card.swapAbilityAttack(sel, attr)
-	})
-}
-
-/*
-func (card *Card) getAttack(sel *goquery.Selection, attr string) {
-	attacks := card.Attacks
-	attack := CardAttacks{
-		Cost: make(map[string]int),
+func (card *Card) getAttack(sel *goquery.Selection) {
+	//Getting base Children to work with
+	children := sel.Children()
+	//Header is a Child element that possesses the Cost, Name and Damage an Attack does
+	header := children.First().Children()
+	//Check if the Sel actually contains an attack, in this case by checking for the Translation
+	//Because we check if it's an Ability before going into this Function it should be definitiv.
+	if s := header.Find(`div[lang] span.explain`); s.Length() == 0 {
+		return
 	}
-
-	attack.Name = "sel.Eq(1).Text()"
-
-	attack.Damage = "sel.Eq(2).Text()"
-	attack.Effect = "sel.Siblings().Text()"
-	println(sel.Length())
-	println(sel.Eq(1).Text())
-
-	//Get Cost:
-	cost := make(map[string]int)
-	id := -1
-	for i, at := range attacks {
-		if attack.Name == at.Name {
-			id = i
-			break
-		}
-	}
-	if id < 0 {
-		attack.Cost[attr] = 1
-	} else if _, ok := attacks[attack.Name]; !ok {
-
-	}
-
-	if _, ok := attack.Cost[attr]; !ok {
-		attack.Cost[attr] = 1
-	}
-	sel.Each(func(i int, s *goquery.Selection) {
-		name, _ := s.Attr("title")
-		if !checkElement(name) {
+	//Get Attack Name
+	at_name := header.Eq(1).Text()
+	//Get Attack Damage, if it does any
+	at_dmg := header.Eq(2).Text()
+	//Get Attack Cost
+	attack_Cost := make(map[string]int)
+	cost_s := header.First().Find(`img.mw-file-element`)
+	cost_s.Each(func(i int, s *goquery.Selection) {
+		element, ok := s.Attr(`alt`)
+		if !ok || element == "" {
 			return
 		}
-		if name == " " {
-			name = "Free"
+		if element == "\u00a0" {
+			element = "Free"
 		}
-		if _, ok := cost[name]; !ok {
-			cost[name] = 1
+		if _, ok := attack_Cost[element]; !ok {
+			attack_Cost[element] = 1
 		} else {
-			cost[name]++
+			attack_Cost[element]++
 		}
 	})
-	attack.Cost = cost
-	ok := false
-	for _, at := range card.Attacks {
-		if attack.Name == at.Name {
-			ok = true
-			break
-		}
+	//Taking secondary Child to get Effect, if the Attack does more then just Damage
+	effect := children.Eq(1).Text()
+	attack := CardAttacks{
+		Name:   at_name,
+		Effect: effect,
+		Damage: at_dmg,
+		Cost:   attack_Cost,
 	}
-	if !ok {
-		card.Attacks = append(card.Attacks, attack)
-	}
-}*/
+	card.Attacks = append(card.Attacks, attack)
+}
 
 // Below Works as Intended!
 
-func (card *Card) swapAbilityAttack(sel *goquery.Selection, attr string) {
-	if attr == "Ability" || attr == "Poké-BODY" || attr == "Poké-POWER" || strings.Contains(sel.Text(), "Pokémon Power") {
-		card.getAbility(sel)
-	} else if checkElement(attr) {
-		return
-		//card.getAttack(sel, attr)
+func (card *Card) getCardAbilityAttacks(doc *goquery.Document) {
+	sel := doc.Find(`[id="Card_text"]`).Parent().NextAllFiltered(`div.roundy`).First()
+	sel.Children().Each(func(i int, s *goquery.Selection) {
+		if s.Find(`a[title="Poké-POWER"], a[title="Poké-BODY"], a[title="Ability"]`).Length() > 0 || strings.Contains(s.Text(), "Pokémon Power") {
+			card.getAbility(s)
+			return
+		}
+		card.getAttack(s)
+	})
+}
+
+func checkElement(attr string) bool {
+	if attr == "\u00a0" || attr == "Grass" || attr == "Fire" || attr == "Water" || attr == "Lightning" || attr == "Fighting" || attr == "Psychic" || attr == "Colorless" || attr == "Darkness" || attr == "Metal" || attr == "Dragon" || attr == "Fairy" {
+		return true
 	}
+	return false
 }
 
 func (card *Card) getAbility(sel *goquery.Selection) {
 	ability := CardAbility{}
-	//fmt.Println(sel.Text())
-	s := sel.Parent().Parent().Parent().Parent().Children()
-	name, _ := s.Find(`span[class="explain"]`).Attr("title")
-	notnew := true
-	for _, x := range card.Ability {
-		if name == x.Name {
-			notnew = false
-			break
-		}
+	children := sel.Children()
+	if children.Length() < 2 {
+		return
 	}
-	if !notnew {
+	header := children.First()
+	name, ok := header.Find(`div[lang] span.explain`).Attr(`title`)
+	if !ok || name == "" {
 		return
 	}
 	ability.Name = name
-	e := s.Find(`span[class="explain"]`).Parent().Parent().Parent().Next().First()
-	ability.Effect = e.Text()
+
+	effect_s := children.Eq(1)
+	ability.Effect = effect_s.Text()
 	card.Ability = append(card.Ability, ability)
 }
 
@@ -195,12 +176,6 @@ func getTCGDexData(doc *goquery.Document) string {
 	return clean
 }
 
-func checkElement(attr string) bool {
-	if attr == " " || attr == "Grass" || attr == "Fire" || attr == "Water" || attr == "Lightning" || attr == "Fighting" || attr == "Psychic" || attr == "Colorless" || attr == "Darkness" || attr == "Metal" || attr == "Dragon" || attr == "Fairy" {
-		return true
-	}
-	return false
-}
 func getStatsTable(doc *goquery.Document) (sel *goquery.Selection) {
 	sel = doc.Find(`[title="Type (TCG)"]`).Parent().Parent().Parent()
 	return

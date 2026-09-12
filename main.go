@@ -46,7 +46,7 @@ func main() {
 		if er := cfg.SpecificCard(); er != nil {
 			log.Fatal(er)
 		}
-		os.Exit(1)
+		return
 	}
 	if err := cfg.Pokemon(poke_Link); err != nil {
 		log.Fatal(err)
