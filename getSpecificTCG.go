@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -41,17 +42,49 @@ import (
 		Effect string `json:"effect"`
 	}
 */
+
 func formatSpecificCard(card Card) {
 	fmt.Printf("%s - %s - %s HP\n", card.Name, card.Type, card.HP)
 	fmt.Println(card.Stage)
-	fmt.Printf("Is weak to: %s, resistant to: %s, and has a Retreat Cost of: %d\n", card.Weakness, card.Resistance, card.RetreatCost)
+	fmt.Printf("Is weak to: %s, resistant to: %s, and has a Retreat Cost of: %d\n", strings.TrimSpace(card.Weakness), strings.TrimSpace(card.Resistance), card.RetreatCost)
+	//Abilities
 	for _, a := range card.Ability {
 		fmt.Printf("-%s:\n", a.Name)
-		fmt.Printf("  %s\n", a.Effect)
+		fmt.Printf("%s\n", a.Effect)
 	}
-	fmt.Println(card.Attacks)
+	//Attacks
+	for _, attack := range card.Attacks {
+		fmt.Printf("-%s:\n", attack.Name)
+		damage := attack.Damage
+		if damage == "" {
+			damage = "0"
+		}
+		fmt.Print("Requires following Energie Cards to activate: ")
+		types := sortMap(attack.Cost)
+		for _, element := range types {
+			if element == "Free" {
+				fmt.Println("None")
+				break
+			}
+			fmt.Printf("%d %s", attack.Cost[element], element)
+		}
+		fmt.Printf("\nDoes %s Damage to the opposing active Pokémon\n", damage)
+		if attack.Effect != "" {
+			fmt.Printf("%s\n", attack.Effect)
+		}
+	}
+	fmt.Println()
 	fmt.Println(card.PokedexEntry)
 }
+
+func sortMap(m map[string]int) (keyList []string) {
+	for key := range m {
+		keyList = append(keyList, key)
+	}
+	sort.Strings(keyList)
+	return
+}
+
 func (cfg *Config) getSpecificCardContent(doc *goquery.Document) (card Card) {
 	card.Name = doc.Find("h1").Text()
 	card.Stage = doc.Find(`[href="/wiki/Type_(TCG)"]`).Parent().Text()
@@ -83,6 +116,17 @@ func (cfg Config) SpecificCard() error {
 	return nil
 }
 
+func (card *Card) getCardAbilityAttacks(doc *goquery.Document) {
+	sel := doc.Find(`[id="Card_text"]`).Parent().NextAllFiltered(`div.roundy`).First()
+	sel.Children().Each(func(i int, s *goquery.Selection) {
+		if s.Find(`a[title="Poké-POWER"], a[title="Poké-BODY"], a[title="Ability"]`).Length() > 0 || strings.Contains(s.Text(), "Pokémon Power") {
+			card.getAbility(s)
+			return
+		}
+		card.getAttack(s)
+	})
+}
+
 func (card *Card) getAttack(sel *goquery.Selection) {
 	//Getting base Children to work with
 	children := sel.Children()
@@ -94,7 +138,10 @@ func (card *Card) getAttack(sel *goquery.Selection) {
 		return
 	}
 	//Get Attack Name
-	at_name := header.Eq(1).Text()
+	name_sel := header.Eq(1)
+	clone := name_sel.Clone()
+	clone.Find(`div[lang]`).Remove()
+	at_name := clone.Text()
 	//Get Attack Damage, if it does any
 	at_dmg := header.Eq(2).Text()
 	//Get Attack Cost
@@ -125,26 +172,6 @@ func (card *Card) getAttack(sel *goquery.Selection) {
 	card.Attacks = append(card.Attacks, attack)
 }
 
-// Below Works as Intended!
-
-func (card *Card) getCardAbilityAttacks(doc *goquery.Document) {
-	sel := doc.Find(`[id="Card_text"]`).Parent().NextAllFiltered(`div.roundy`).First()
-	sel.Children().Each(func(i int, s *goquery.Selection) {
-		if s.Find(`a[title="Poké-POWER"], a[title="Poké-BODY"], a[title="Ability"]`).Length() > 0 || strings.Contains(s.Text(), "Pokémon Power") {
-			card.getAbility(s)
-			return
-		}
-		card.getAttack(s)
-	})
-}
-
-func checkElement(attr string) bool {
-	if attr == "\u00a0" || attr == "Grass" || attr == "Fire" || attr == "Water" || attr == "Lightning" || attr == "Fighting" || attr == "Psychic" || attr == "Colorless" || attr == "Darkness" || attr == "Metal" || attr == "Dragon" || attr == "Fairy" {
-		return true
-	}
-	return false
-}
-
 func (card *Card) getAbility(sel *goquery.Selection) {
 	ability := CardAbility{}
 	children := sel.Children()
@@ -152,11 +179,11 @@ func (card *Card) getAbility(sel *goquery.Selection) {
 		return
 	}
 	header := children.First()
-	name, ok := header.Find(`div[lang] span.explain`).Attr(`title`)
-	if !ok || name == "" {
-		return
-	}
-	ability.Name = name
+	name := header.Find(`div[lang] span.explain`).Parent().Parent()
+	name_clone := name.Clone()
+	name_clone.Find(`div[lang]`).Remove()
+	name_text := name_clone.Text()
+	ability.Name = name_text
 
 	effect_s := children.Eq(1)
 	ability.Effect = effect_s.Text()
@@ -168,11 +195,16 @@ func getTCGDexData(doc *goquery.Document) string {
 	if sel.Text() == "" {
 		return "No PokéDex Entry on this Pokémon Card."
 	}
-	raw := sel.Text()
+	clone := sel.Clone()
+	clone.Find(`div[style="margin-top: 0.125rem"]`).Children().Eq(2).Remove()
+	raw := clone.Text()
 	de_spaced := strings.TrimSpace(raw)
 	de_ln := strings.ReplaceAll(de_spaced, "\n\n", "\n")
 	de_ln = strings.Replace(de_ln, "\n", "", 1)
 	clean := strings.Replace(de_ln, "Pokédex entry", "Pokédex entry:\n", 1)
+	clean = strings.ReplaceAll(clean, "\nNo.\n", "\nNo.: ")
+	clean = strings.ReplaceAll(clean, "\nHeight\n", ", Height: ")
+	clean = strings.ReplaceAll(clean, "\nWeight\n", ", Weight: ")
 	return clean
 }
 
